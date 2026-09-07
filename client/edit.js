@@ -191,23 +191,41 @@
     return { cleanup: cleanup, bar: bar };
   }
 
-  function saveField(key, value) {
+  function putContent(key, value) {
     var token = getToken();
     return fetch(API_BASE + "/api/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
       body: JSON.stringify({ page: page, key: key, value: value })
-    }).then(function (res) {
+    });
+  }
+
+  function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+  // The API can be cold (Hostinger sleeps idle Node processes) — one transient
+  // network failure or 502/503 doesn't mean the save actually failed, so retry
+  // once before giving up.
+  function saveField(key, value, isRetry) {
+    return putContent(key, value).then(function (res) {
       if (res.status === 401) {
         clearToken();
         exitAdminMode();
         toast("Sesión vencida — volvé a entrar");
         return false;
       }
+      if (res.status >= 500 && !isRetry) {
+        return wait(1500).then(function () { return saveField(key, value, true); });
+      }
       if (!res.ok) { toast("No se pudo guardar"); return false; }
       toast("Guardado");
       return true;
-    }).catch(function () { toast("Error de conexión"); return false; });
+    }).catch(function () {
+      if (!isRetry) {
+        return wait(1500).then(function () { return saveField(key, value, true); });
+      }
+      toast("Error de conexión");
+      return false;
+    });
   }
 
   function wireEditable(el) {

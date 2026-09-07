@@ -35,6 +35,16 @@ El primer intento del botón 🗑 de borrar sección lo agregaba como hijo del `
 
 `https://qigong-evidencia.hostingersite.com` (sin `/` al final) — el header `Origin` que manda el navegador nunca lleva path ni barra final. Si `ALLOWED_ORIGINS` no matchea carácter por carácter, el preflight `OPTIONS` responde sin `Access-Control-Allow-Origin` y el navegador bloquea todo silenciosamente (sin error visible en el response de `curl`, porque `curl` no aplica CORS — solo se ve roto en un navegador real).
 
-## 6. Sin navegador disponible en esta sesión — verificar por API, ser honesto sobre el límite
+## 6. El Node.js de Hostinger "duerme" el proceso por inactividad
+
+Confirmado por los logs (`hosting_getNode_jsRuntimeLogsV1`): el mensaje `content-api listening on 3000` reapareció después de más de un día de silencio total, justo en el momento en que alguien volvió a usar la página. El hosting compartido de Hostinger recicla/duerme el proceso Node cuando no recibe tráfico por un rato, y la primera tanda de requests tras ese sueño puede fallar mientras el proceso arranca y reconstruye el pool de conexión a MySQL — típicamente se nota como "error de conexión" en la 2ª o 3ª edición seguida, no en la primera (que es la que despierta al server).
+
+**Fix de dos capas:**
+1. **Mitigar la causa**: un cron job (`hosting_createAccountCronJobV1`) que le pega a `/api/health` cada 10 minutos, para que el proceso nunca llegue a dormirse durante horas de uso normal.
+2. **Tolerar el síntoma de todos modos**: `saveField` en `client/edit.js` reintenta automáticamente UNA vez (con ~1.5s de espera) ante un error de red o un 5xx, antes de mostrarle "no se pudo guardar" al usuario. Un cold-start real casi siempre se resuelve en ese margen.
+
+Si se dockyfica una página nueva y el server no tiene cron configurado todavía, agregarlo — un solo cron sirve para toda la API compartida, no hace falta uno por página.
+
+## 7. Sin navegador disponible en esta sesión — verificar por API, ser honesto sobre el límite
 
 Esta sesión no tuvo acceso a Chrome (`mcp__chrome-devtools`) para probar clicks reales. Todo se verificó por API directa (curl: login, guardar, leer, revertir) y por lectura del HTML/JS servido. Es una verificación real pero parcial — no reemplaza un click real en un navegador. Cuando esto pase: decirlo explícitamente al usuario en vez de asumir que "probé el flujo" cubre la interacción visual.
