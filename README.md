@@ -8,11 +8,19 @@ Nació como una solución puntual para dos páginas de evidencia sobre QiGong (`
 
 ```
 docky/
-  server/        API compartida (Node/Express + MySQL) — UNA sola instancia sirve a todas las páginas "dockyficadas"
-  client/edit.js Script cliente reusable, sin dependencias — se referencia tal cual desde cada página
-  docs/          Cómo integrar una página nueva
-  LEARNINGS.md   Gotchas encontrados operando esto en Hostinger — leer antes de tocar el deploy
+  server/                    API compartida (Node/Express + MySQL) — UNA sola instancia sirve a todas las páginas "dockyficadas"
+  server/comments-client.js  Componente de comentarios — servido directo por la API en GET /comments.js (no se copia por sitio)
+  client/edit.js             Componente de edición inline — se copia tal cual a cada sitio que lo usa
+  docs/INTEGRATION.md        Cómo integrar edit.js en una página nueva
+  docs/COMMENTS.md           Cómo integrar comments.js en una página nueva
+  LEARNINGS.md               Gotchas encontrados operando esto en Hostinger — leer antes de tocar el deploy
 ```
+
+Tres componentes, mismo espíritu ("un script tag y listo"):
+
+1. **`edit.js`** — edición inline con contraseña de admin (párrafos, títulos, borrado de secciones).
+2. **`comments.js`** — comentarios por elemento, nombre libre o cuenta liviana (email + código, sin contraseña).
+3. Login por código (email, sin contraseña) — hoy vive adentro de `comments.js`/el server; si en el futuro hace falta usarlo suelto (sin comentarios), se puede separar en su propio archivo cliente reusando los mismos endpoints `/api/auth/*`.
 
 **Multi-tenant por diseño**: la API no es "una API por sitio". Es una sola API (`contenteditor-api.hostingersite.com`), con una tabla `page_content(page_slug, field_key, value)`. Cada página dockyficada usa un `page_slug` propio (ej. `"dolencias"`, `"salud-mental"`) y su origen debe agregarse a `ALLOWED_ORIGINS` en el servidor. Una sola contraseña de admin sirve para todas las páginas por ahora — es intencional (simplicidad > multi-usuario), se puede evolucionar más adelante.
 
