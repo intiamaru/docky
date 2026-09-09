@@ -197,7 +197,7 @@
     });
   }
 
-  function openPanel(anchor, key) {
+  function openPanel(anchor, badgeEl, key) {
     closeAnyPanel();
     var panel = el("div", { class: "cm-panel" });
     var head = el("div", { class: "cm-head" });
@@ -248,11 +248,11 @@
     });
 
     document.body.appendChild(panel);
-    placeNear(panel, anchor);
+    placeNear(panel, badgeEl);
     closeBtn.addEventListener("click", closeAnyPanel);
     setTimeout(function () {
       document.addEventListener("mousedown", function outside(e) {
-        if (panel.contains(e.target) || anchor.contains(e.target)) return;
+        if (panel.contains(e.target) || anchor.contains(e.target) || badgeEl.contains(e.target)) return;
         document.removeEventListener("mousedown", outside, true);
         panel.remove();
       }, true);
@@ -289,7 +289,7 @@
     badges.push({ anchor: anchorEl, el: badge, key: key });
     badge.addEventListener("click", function (e) {
       e.stopPropagation();
-      openPanel(anchorEl, key);
+      openPanel(anchorEl, badge, key);
     });
     updateBadge(anchorEl, key);
   }
